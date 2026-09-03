@@ -1,0 +1,41 @@
+{
+  "task": "Export the open TextEdit document as benchmark.pdf and verify that the save sheet closed.",
+  "counting": {
+    "turn": "one tool request followed by its result",
+    "textTokenEstimate": "ceil(UTF-8 bytes in compact JSON tool requests / 4)",
+    "imageTokens": "excluded; image observations are counted separately"
+  },
+  "traces": [
+    {
+      "backend": "zcode-computer-use",
+      "kind": "scripted protocol path",
+      "calls": [
+        {"tool":"menu","arguments":{"app":"TextEdit","path":"File > Export as PDF…"}},
+        {"tool":"get_app_state","arguments":{"app":"TextEdit","depth":4,"filter":"Save"}},
+        {"tool":"find","arguments":{"role":"AXTextField"}},
+        {"tool":"set_value","arguments":{"element_index":1,"value":"benchmark.pdf"}},
+        {"tool":"find","arguments":{"text":"Save","role":"AXButton"}},
+        {"tool":"click","arguments":{"element_index":2}},
+        {"tool":"wait_for","arguments":{"text":"Save","until":"gone","timeout_s":5}}
+      ],
+      "imageObservations": 1
+    },
+    {
+      "backend": "Anthropic-style screenshot loop",
+      "kind": "scripted primitive baseline",
+      "calls": [
+        {"tool":"computer","arguments":{"action":"screenshot"}},
+        {"tool":"computer","arguments":{"action":"left_click","coordinate":[42,12]}},
+        {"tool":"computer","arguments":{"action":"screenshot"}},
+        {"tool":"computer","arguments":{"action":"left_click","coordinate":[110,312]}},
+        {"tool":"computer","arguments":{"action":"screenshot"}},
+        {"tool":"computer","arguments":{"action":"left_click","coordinate":[610,445]}},
+        {"tool":"computer","arguments":{"action":"type","text":"benchmark.pdf"}},
+        {"tool":"computer","arguments":{"action":"screenshot"}},
+        {"tool":"computer","arguments":{"action":"left_click","coordinate":[907,648]}},
+        {"tool":"computer","arguments":{"action":"screenshot"}}
+      ],
+      "imageObservations": 5
+    }
+  ]
+}

@@ -7,12 +7,16 @@ actions with screenshot-pixel fallback, menu-bar driving, condition waiting,
 OCR fallback via Apple Vision, window management, explicit clipboard access,
 background observe, verified text selection, and four-way scrolling.
 
-The design metric is **agent turns and tokens per completed task**: trees
-carry diff markers so one re-observe tells the agent what changed, `filter`
-and `find` keep 350-element trees out of the context window, `wait_for`
-replaces observe-poll loops with one call, and `include_screenshot` returns
-the capture as MCP image content so image-rendering clients skip a file-read
-round trip.
+The design target is **fewer agent turns and tokens per completed task**:
+trees carry diff markers so one re-observe tells the agent what changed,
+`filter` and `find` keep 350-element trees out of the context window,
+`wait_for` replaces observe-poll loops with one call, and
+`include_screenshot` returns the capture as MCP image content so
+image-rendering clients skip a file-read round trip. A reproducible
+[one-task protocol benchmark](docs/turns-tokens-benchmark.md) currently shows
+the semantic path at 7 tool turns / 118 estimated request tokens / 1 image
+observation versus 10 / 165 / 5 for a scripted Anthropic-style screenshot
+loop. It is a control-flow lower bound, not yet an end-to-end agent win.
 
 One binary, two surfaces, one state file:
 
@@ -27,27 +31,41 @@ The v3 Python server (`mcp/_legacy/server.py`) is kept for provenance; the
 Go port reproduces its protocol byte-for-byte, including the golden tests
 (`tests/_legacy/test_protocol.py` is the original suite the Go tests mirror).
 
-## Why this over a built-in
+## Why this over named alternatives
 
-| | zcode-computer-use | typical built-in |
-|---|---|---|
-| Install surface | one static Go binary, zero runtime deps | bundled, opaque |
-| Tree hygiene | forced re-fetch, anti-forgery address chains, diff markers | varies |
-| Errors | structured `{code, message, remedy}` JSON | prose |
-| Focus | background observe (`activate:false`) never steals focus | usually activates |
-| Launching | never auto-launches without `launch:true` | often does |
-| Scroll | verified 4-way wheel events (session-tap + pixel units) | often vertical-only, unverified |
-| Menu bar | list + click by path (`"File > Export as PDF…"`) | usually unreachable |
-| Waiting | `wait_for` text present/gone, structured timeout | re-observe loops |
-| No AX tree | `ocr` — Vision text regions in click-ready screenshot pixels | stuck |
-| Text selection | content-verified with keyboard fallback | rare |
-| Auditability | JSONL log, permission-aware selftest, golden protocol tests | — |
+Choose by workload rather than treating every computer-use backend as the
+same. This comparison reflects the projects' public documentation as checked
+2026-09-03; only the linked protocol-path row has been benchmarked here.
+
+| | zcode-computer-use | [Anthropic computer use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool) | [macos-use](https://macos-use.dev/) |
+|---|---|---|---|
+| Primary observation | Per-window screenshot + indexed AX tree + diff markers | Screenshot returned after mouse/keyboard actions | AX tree; action responses return tree diffs |
+| Targeting | Element index first; screenshot pixels as fallback | Screenshot coordinates | Element text or coordinates |
+| macOS menu bar | List or click an exact path such as `File > Export as PDF…` | Drive it visually | No dedicated menu-path tool documented |
+| Weak/absent AX tree | Apple Vision OCR returns click-ready boxes | Native path: pixels/vision | Coordinate fallback; screenshots on demand |
+| Waiting | `wait_for` polls text present/gone inside one tool call | Agent repeats observation/action loop | Action + diff tools; no equivalent wait tool documented |
+| Interface | MCP-over-stdio **and** matching JSON CLI verbs sharing state | Anthropic API computer tool | MCP-over-stdio |
+| Install | Release binary when tagged; source build is one Go binary | Application implements Anthropic's agent loop | `npx` package; Swift builds on first run |
+| Local audit surface | JSONL event log, permission-aware selftest, golden protocol suite | Depends on the host application | Local tree dumps; open-source server |
+| TextEdit export protocol path | **7 turns, 118 estimated request tokens, 1 image** | **10 turns, 165 estimated request tokens, 5 images** (scripted primitive baseline) | Not measured here |
+
+The benchmark counts compact JSON request bytes at four bytes per estimated
+text token and excludes responses, reasoning, system prompts, and image
+tokens. It supports only the narrow claim that the scripted semantic route
+uses fewer round trips and images; see the [method and source
+trace](docs/turns-tokens-benchmark.md). Anthropic computer use remains the
+portable choice across operating systems. macos-use is the closer semantic
+competitor and currently has the simpler one-line installation. This project
+is differentiated by its dual CLI/MCP surface, explicit menu and wait tools,
+OCR fallback, and protocol-compatibility tests—not by an unmeasured universal
+token claim.
 
 ## Install
 
-Prebuilt: every tagged release ships a universal macOS binary — download
-`cuu-vX.Y.Z-macos-universal.tar.gz` from the releases page, unpack, and
-point `mcpServers` at it (no Go toolchain needed).
+Prebuilt binaries are wired but **not published yet**: the release workflow
+will attach `cuu-vX.Y.Z-macos-universal.tar.gz` to the first `vX.Y.Z` tag.
+Until that human-gated tag exists, the releases page has no asset and the
+working install path is source build below.
 
 From source (the plugin manifest points at the built binary, which is not
 tracked in git):
