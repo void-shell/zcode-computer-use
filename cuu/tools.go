@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+// shotTempPattern names the intermediate screenshot file. It must not begin
+// with a dot: macOS screencapture refuses to write to a hidden destination
+// ("cannot write file to intended destination"), which silently broke every
+// window capture. pruneScreenshots only manages the final state-* names, so
+// this prefix stays outside that namespace.
+const shotTempPattern = "shot-*.png"
+
 // Ordered payload structs — JSON object key order follows the Python dicts,
 // and agents read these documents.
 
@@ -230,8 +237,9 @@ func toolGetAppState(st *serverState, a args) (any, *ToolError) {
 
 	// capture to an unpredictable temp name, then rename onto the counter
 	// path — a pre-placed symlink at the predictable name is replaced, not
-	// followed, and the file is private to this user
-	tmp, err := os.CreateTemp(dataDir(), ".shot-*.png")
+	// followed, and the file is private to this user. The template must stay
+	// non-hidden (see shotTempPattern) or screencapture silently writes nothing.
+	tmp, err := os.CreateTemp(dataDir(), shotTempPattern)
 	if err != nil {
 		return nil, toolErr("internal", "could not create temp capture file", "")
 	}

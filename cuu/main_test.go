@@ -1043,3 +1043,21 @@ func TestArgCoercionGolden(t *testing.T) {
 		t.Fatalf("optional str: %v %v", v, terr)
 	}
 }
+
+// TestShotTempPatternNotHidden guards the fix for a silent capture bug:
+// macOS screencapture exits 0 without writing when the destination is a
+// dot-prefixed (hidden) file, so a hidden template made every window capture
+// fall through to "screencapture produced no image". Keep the template
+// visible, with its random placeholder and .png suffix, and outside the
+// state-* namespace that pruneScreenshots owns.
+func TestShotTempPatternNotHidden(t *testing.T) {
+	if strings.HasPrefix(shotTempPattern, ".") {
+		t.Fatalf("shotTempPattern must not be hidden: screencapture skips it (%q)", shotTempPattern)
+	}
+	if strings.HasPrefix(shotTempPattern, "state-") {
+		t.Fatalf("shotTempPattern must stay outside the pruned namespace: %q", shotTempPattern)
+	}
+	if !strings.Contains(shotTempPattern, "*") || !strings.HasSuffix(shotTempPattern, ".png") {
+		t.Fatalf("shotTempPattern must keep a placeholder and a .png suffix: %q", shotTempPattern)
+	}
+}
