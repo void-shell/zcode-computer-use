@@ -7,10 +7,12 @@
 > OCR fallback via Apple Vision (click-ready screenshot-pixel boxes), window
 > management in screen points, explicit clipboard read/set, optional inline
 > MCP image content, background observation, content-verified text selection,
-> and verified 4-way scroll.
+> verified 4-way scroll, and a headless DevTools browser (browser_open, state,
+> eval, click, type, screenshot, close) for web pages with no focus change.
 
 - Install: build once (`cd cuu && go build -o bin/cuu .`), then copy the `mcpServers` JSON from README.md § Install into your MCP client config (`command`: `.../cuu/bin/cuu`, `args`: `["serve"]`)
 - Requirements: macOS; Go 1.25+ to build; cliclick (`brew install cliclick`); Accessibility + Screen Recording grants for the host app; scroll uses Apple's bundled /usr/bin/python3 (pyobjc via Xcode CLT) — no other Python at runtime
 - Verify: `cd cuu && go test ./...` (golden protocol suite) · `cuu/bin/cuu selftest` (deps + permissions preflight) · legacy v3 suites under `tests/_legacy/` (21 protocol, headless-safe; 31-check live TextEdit E2E)
+- Headless browser: `browser_*` tools drive Chromium over the DevTools Protocol on a loopback port (no window, no AX/Screen Recording grant); the session is reused from the shared state file until `browser_close`
 - Key traps documented: HID-tap wheel events are silently dropped (use kCGSessionEventTap + pixel units); TextEdit ignores scripted AXSelectedTextRange writes (keyboard-walk fallback); CFRelease segfaults in JXA
 - License: MIT

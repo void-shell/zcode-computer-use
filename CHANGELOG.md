@@ -2,6 +2,31 @@
 
 All notable changes to `zcode-computer-use` are documented here.
 
+## 4.3.0 — 2026-09-12
+
+### Added
+
+- `browser_open`, `browser_state`, `browser_eval`, `browser_screenshot`,
+  `browser_click`, `browser_type`, `browser_close` — headless Chromium driven
+  over the DevTools Protocol on a loopback port. Nothing appears on screen and
+  no Accessibility or Screen Recording grant is involved, so web pages are
+  reachable without moving the owner's cursor or changing focus; the AX tools
+  stay for native windows. The session (pid, port, throwaway profile) lives in
+  the shared state file, so CLI verbs and the MCP server drive the same browser,
+  and `browser_close` stops it and deletes the profile. Clicks and typing
+  dispatch real input events (`Input.dispatchMouseEvent`, `Input.insertText`)
+  rather than a JS `.click()`, and `browser_screenshot` captures through the
+  protocol, never the display.
+
+### Notes
+
+- The DevTools websocket client is hand-rolled on the standard library
+  (RFC 6455 handshake, masked frames, 16/64-bit lengths, continuation and
+  control frames), so `cuu` stays a single static binary with no new dependency.
+- New regression tests cover manifest/dispatch agreement, the frame codec at
+  each length class, URL normalization, JS-literal escaping, and a live headless
+  round trip that self-skips when no Chromium browser is installed.
+
 ## 4.2.0 — 2026-08-31
 
 The capability wave, executed by a prewalked plan

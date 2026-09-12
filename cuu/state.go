@@ -37,6 +37,9 @@ type serverState struct {
 	// diff memory: chain -> body of the previous capture of the SAME app+window
 	PrevKey    string            `json:"prev_key"` // "" = none
 	PrevBodies map[string]string `json:"prev_bodies"`
+	// Browser is the headless DevTools session shared by the CLI verbs and the
+	// MCP server; nil means no browser has been started yet.
+	Browser *browserSession `json:"browser,omitempty"`
 }
 
 func statePath() string { return filepath.Join(dataDir(), "state.json") }

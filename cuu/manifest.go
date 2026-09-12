@@ -217,5 +217,84 @@ const toolsManifest = `[
     "filter": {"type": "string", "description": "case-insensitive substring: only lines whose text matches are returned"}
    }
   }
+ },
+ {
+  "name": "browser_open",
+  "description": "Launch a headless Chromium browser (if none is running) and navigate to a url over the DevTools Protocol. Nothing appears on screen and no Accessibility or Screen Recording grant is needed — use this instead of the AX tools for web pages. Returns the final url, title, browser binary and debug port; the session is reused by later browser_* calls until browser_close.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "url": {"type": "string", "description": "url to open; a bare host is upgraded to https"},
+    "browser": {"type": "string", "description": "browser binary (absolute path or PATH name); default auto-detects Chrome, Chromium, Helium, Brave, Edge"},
+    "headless": {"type": "boolean", "default": true, "description": "false opens a real window and WILL take focus"},
+    "timeout_s": {"type": "number", "default": 30, "description": "seconds to wait for document.readyState to reach complete"}
+   },
+   "required": ["url"]
+  }
+ },
+ {
+  "name": "browser_state",
+  "description": "Report the open page url, title, readyState and a text snapshot (document.body.innerText, capped at max_chars). One call per observation is enough — act on what it returns instead of polling.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "include_text": {"type": "boolean", "default": true, "description": "false returns metadata only"},
+    "max_chars": {"type": "number", "default": 4000, "description": "text cap; text_chars still reports the untruncated length"}
+   }
+  }
+ },
+ {
+  "name": "browser_eval",
+  "description": "Evaluate a JavaScript expression in the page and return its value as JSON (returnByValue). This is the escape hatch for anything the other browser tools do not cover: structured DOM reads, form logic, waiting on app state. A thrown exception returns a structured browser_eval_failed error.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "expression": {"type": "string", "description": "JavaScript expression; a bare object literal must be wrapped in parentheses"},
+    "await_promise": {"type": "boolean", "default": true, "description": "await a returned promise before responding"}
+   },
+   "required": ["expression"]
+  }
+ },
+ {
+  "name": "browser_screenshot",
+  "description": "Capture the page as a PNG through the DevTools Protocol and return its path, byte size and pixel dimensions. Open the result with read_image. Unlike the AX screenshot this never touches the display, so it works with no window on screen.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "path": {"type": "string", "description": "destination file; default is browser-<time>.png in the cuu data dir"},
+    "full_page": {"type": "boolean", "default": false, "description": "capture beyond the viewport"}
+   }
+  }
+ },
+ {
+  "name": "browser_click",
+  "description": "Click in the page with a synthesized mouse event (Input.dispatchMouseEvent), not a JS .click(). Target an element by CSS selector — scrolled into view and centred automatically — or a viewport point with x/y. Prefer the selector: it survives layout changes.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "selector": {"type": "string", "description": "CSS selector; the element centre becomes the click point"},
+    "x": {"type": "number", "description": "viewport x in CSS pixels (requires y)"},
+    "y": {"type": "number", "description": "viewport y in CSS pixels (requires x)"}
+   }
+  }
+ },
+ {
+  "name": "browser_type",
+  "description": "Type text into the page: optionally focus a CSS selector first, insert the text at the caret, then optionally press Enter. Uses Input.insertText, so JS keydown handlers are not triggered character by character.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "text": {"type": "string", "description": "literal text to insert"},
+    "selector": {"type": "string", "description": "CSS selector to focus first; default uses the already-focused element"},
+    "clear": {"type": "boolean", "default": false, "description": "empty the field before typing and fire an input event"},
+    "submit": {"type": "boolean", "default": false, "description": "press Enter after typing"}
+   },
+   "required": ["text"]
+  }
+ },
+ {
+  "name": "browser_close",
+  "description": "Stop the headless browser and delete its throwaway profile directory. Call this when a browsing task is finished; a later browser_open starts a fresh session.",
+  "inputSchema": {"type": "object", "properties": {}}
  }
 ]`

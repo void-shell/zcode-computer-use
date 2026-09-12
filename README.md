@@ -5,7 +5,8 @@ binary that gives an agent eyes and hands on native apps: per-window
 screenshots, an indexed accessibility tree with diff markers, element-first
 actions with screenshot-pixel fallback, menu-bar driving, condition waiting,
 OCR fallback via Apple Vision, window management, explicit clipboard access,
-background observe, verified text selection, and four-way scrolling.
+background observe, verified text selection, four-way scrolling, and a headless
+DevTools browser for web pages with no focus change.
 
 The design target is **fewer agent turns and tokens per completed task**:
 trees carry diff markers so one re-observe tells the agent what changed,
@@ -160,6 +161,32 @@ And three capability tools round out the surface:
 (`ax_range` or `keyboard`) — the selection is verified against element
 content, not trusted. `type_text` defaults to a clipboard paste (saved and
 restored); `method:"keys"` never touches the clipboard.
+
+## Headless browser
+
+Web pages do not need the AX stack. `browser_open(url)` launches Chromium
+headless and speaks the DevTools Protocol over a loopback port, so no window
+appears, focus never moves, and no Accessibility or Screen Recording grant is
+required. The session is recorded in the shared state file, so `cuu` verbs and
+the MCP server drive the same browser.
+
+- `browser_state(include_text?, max_chars?)` returns the url, title,
+  `readyState` and a capped `document.body.innerText` snapshot.
+- `browser_eval(expression, await_promise?)` evaluates JavaScript and returns the
+  value as JSON — the escape hatch for structured DOM reads and for waiting on
+  app state.
+- `browser_click(selector | x,y)` and `browser_type(text, selector?, clear?, submit?)`
+  dispatch real input events (`Input.dispatchMouseEvent`, `Input.insertText`), not a
+  JS `.click()`, so handlers that ignore synthetic clicks still fire.
+  `browser_type` inserts text wholesale; dispatch per-key events through
+  `browser_eval` when a page listens for them.
+- `browser_screenshot(path?, full_page?)` captures through the protocol and
+  reports the PNG size; it never touches the display, so it works with no window
+  on screen.
+- `browser_close` stops the browser and deletes its throwaway profile.
+
+`headless: false` opens a real window and takes focus — leave it at the default
+`true` while the owner is working.
 
 ## The CLI
 

@@ -253,6 +253,20 @@ func runTool(name string, st *serverState, a args) (any, *ToolError) {
 		return toolWindow(st, a)
 	case "ocr":
 		return toolOCR(st, a)
+	case "browser_open":
+		return toolBrowserOpen(st, a)
+	case "browser_state":
+		return toolBrowserState(st, a)
+	case "browser_eval":
+		return toolBrowserEval(st, a)
+	case "browser_screenshot":
+		return toolBrowserScreenshot(st, a)
+	case "browser_click":
+		return toolBrowserClick(st, a)
+	case "browser_type":
+		return toolBrowserType(st, a)
+	case "browser_close":
+		return toolBrowserClose(st, a)
 	default:
 		return nil, toolErr("internal", "no handler for "+name, "")
 	}
@@ -261,22 +275,29 @@ func runTool(name string, st *serverState, a args) (any, *ToolError) {
 // cliVerbs: verb name -> MCP tool + accepted flags. "b:" bool, "i:" int,
 // "n:" number prefixes select the flag type; bare names are strings.
 var cliVerbs = map[string]cliTool{
-	"list_apps":      {tool: "list_apps"},
-	"list_windows":   {tool: "list_windows", flags: []string{"app"}},
-	"get_app_state":  {tool: "get_app_state", flags: []string{"app", "i:depth", "window", "b:activate", "b:launch", "filter", "b:include_screenshot"}},
-	"click":          {tool: "click", flags: []string{"i:element_index", "n:x", "n:y", "mouse_button", "i:click_count"}},
-	"type_text":      {tool: "type_text", flags: []string{"text", "method"}},
-	"press_key":      {tool: "press_key", flags: []string{"key"}},
-	"scroll":         {tool: "scroll", flags: []string{"direction", "n:pages", "n:x", "n:y"}},
-	"drag":           {tool: "drag", flags: []string{"n:from_x", "n:from_y", "n:to_x", "n:to_y"}},
-	"set_value":      {tool: "set_value", flags: []string{"i:element_index", "value"}},
-	"select_text":    {tool: "select_text", flags: []string{"i:element_index", "i:start", "i:length"}},
-	"element_info":   {tool: "element_info", flags: []string{"i:element_index"}},
-	"perform_action": {tool: "perform_action", flags: []string{"i:element_index", "action"}},
-	"find":           {tool: "find", flags: []string{"text", "role", "i:limit"}},
-	"menu":           {tool: "menu", flags: []string{"app", "path"}},
-	"wait_for":       {tool: "wait_for", flags: []string{"text", "until", "n:timeout_s"}},
-	"clipboard":      {tool: "clipboard", flags: []string{"text"}},
-	"window":         {tool: "window", flags: []string{"app", "window", "action", "n:x", "n:y", "n:width", "n:height"}},
-	"ocr":            {tool: "ocr", flags: []string{"filter"}},
+	"list_apps":          {tool: "list_apps"},
+	"list_windows":       {tool: "list_windows", flags: []string{"app"}},
+	"get_app_state":      {tool: "get_app_state", flags: []string{"app", "i:depth", "window", "b:activate", "b:launch", "filter", "b:include_screenshot"}},
+	"click":              {tool: "click", flags: []string{"i:element_index", "n:x", "n:y", "mouse_button", "i:click_count"}},
+	"type_text":          {tool: "type_text", flags: []string{"text", "method"}},
+	"press_key":          {tool: "press_key", flags: []string{"key"}},
+	"scroll":             {tool: "scroll", flags: []string{"direction", "n:pages", "n:x", "n:y"}},
+	"drag":               {tool: "drag", flags: []string{"n:from_x", "n:from_y", "n:to_x", "n:to_y"}},
+	"set_value":          {tool: "set_value", flags: []string{"i:element_index", "value"}},
+	"select_text":        {tool: "select_text", flags: []string{"i:element_index", "i:start", "i:length"}},
+	"element_info":       {tool: "element_info", flags: []string{"i:element_index"}},
+	"perform_action":     {tool: "perform_action", flags: []string{"i:element_index", "action"}},
+	"find":               {tool: "find", flags: []string{"text", "role", "i:limit"}},
+	"menu":               {tool: "menu", flags: []string{"app", "path"}},
+	"wait_for":           {tool: "wait_for", flags: []string{"text", "until", "n:timeout_s"}},
+	"clipboard":          {tool: "clipboard", flags: []string{"text"}},
+	"window":             {tool: "window", flags: []string{"app", "window", "action", "n:x", "n:y", "n:width", "n:height"}},
+	"ocr":                {tool: "ocr", flags: []string{"filter"}},
+	"browser_open":       {tool: "browser_open", flags: []string{"url", "browser", "b:headless", "n:timeout_s"}},
+	"browser_state":      {tool: "browser_state", flags: []string{"b:include_text", "n:max_chars"}},
+	"browser_eval":       {tool: "browser_eval", flags: []string{"expression", "b:await_promise"}},
+	"browser_screenshot": {tool: "browser_screenshot", flags: []string{"path", "b:full_page"}},
+	"browser_click":      {tool: "browser_click", flags: []string{"selector", "n:x", "n:y"}},
+	"browser_type":       {tool: "browser_type", flags: []string{"text", "selector", "b:submit", "b:clear"}},
+	"browser_close":      {tool: "browser_close"},
 }
