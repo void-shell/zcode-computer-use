@@ -68,11 +68,12 @@ will attach `cuu-vX.Y.Z-macos-universal.tar.gz` to the first `vX.Y.Z` tag.
 Until that human-gated tag exists, the releases page has no asset and the
 working install path is source build below.
 
-From source (the plugin manifest points at the built binary, which is not
-tracked in git):
+From source — the plugin manifest points at the built binary, which is not
+tracked in git:
 
 ```bash
-cd cuu
+git clone https://github.com/void-shell/zcode-computer-use
+cd zcode-computer-use/cuu
 go build -o bin/cuu .
 ```
 

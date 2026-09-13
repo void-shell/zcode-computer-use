@@ -1,7 +1,7 @@
 # Demo assets
 
 - `cinta-quickstart.gif` / `cinta-tests.gif` — terminal GIFs rendered with
-  [cinta](https://github.com/sainzs/cinta) (self-typing terminal sessions).
+  cinta, a private tool (self-typing terminal sessions).
   The `.html` files next to them are the regenerable sources — edit the
   script JSON in the HTML, re-render from the cinta repo, and the GIF is
   reproducible. Output lines mirror the real selftest and test-suite output.
