@@ -1,7 +1,7 @@
 {
   "name": "zcode-computer-use",
-  "version": "4.0.0",
-  "description": "macOS GUI control for ZCode: per-window screenshots plus an indexed accessibility tree with diff markers, element-first actions with coordinate fallback, background observe, verified text selection, and 4-way scroll. Single static Go binary — MCP server over stdio plus a cuu CLI with one JSON-printing verb per tool.",
+  "version": "4.3.0",
+  "description": "macOS GUI control for ZCode: per-window screenshots plus an indexed accessibility tree with diff markers, element-first actions with coordinate fallback, background observe, verified text selection, 4-way scroll, and a headless DevTools browser for web pages with no focus change. Single static Go binary — MCP server over stdio plus a cuu CLI with one JSON-printing verb per tool.",
   "author": {
     "name": "Santiago Sainz"
   },
@@ -11,7 +11,10 @@
     "macos",
     "accessibility",
     "gui-automation",
-    "screen"
+    "screen",
+    "browser",
+    "devtools-protocol",
+    "headless"
   ],
   "skills": "skills",
   "mcpServers": {
