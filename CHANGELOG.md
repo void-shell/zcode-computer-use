@@ -2,6 +2,37 @@
 
 All notable changes to `zcode-computer-use` are documented here.
 
+## Unreleased
+
+### Added
+
+- An `activate` option on the element actions — `click` (with `element_index`),
+  `set_value`, `select_text` and `perform_action` — on both the CLI and the MCP
+  surface, defaulting to `true` so existing callers are unaffected. Passing
+  `activate:false` sends the accessibility request without the
+  `set frontmost of process ...` statement, so an agent can drive a background
+  app without taking the owner's keyboard focus. The guarantee is deliberately
+  bounded: a non-activating call reports that the AX request was submitted, not
+  that the UI changed; an app may ignore unfocused events or activate itself.
+- Refusals instead of guesses in that mode: coordinate clicks are rejected with
+  `invalid_args` rather than run against whatever covers the screen point, and
+  `perform_action` refuses `AXRaise` because raising the window contradicts the
+  request. `select_text` attempts the AX range only and reports `unsupported`
+  when it cannot verify, naming the disabled keyboard fallback.
+- Regression coverage in `cuu/actions_test.go`: the option name and schema across
+  all four verbs, the exact generated AppleScript with and without the focus
+  statement, strict boolean parsing, the refusal paths, and a pin on the
+  synthesized-input verbs (`type_text`, `press_key`, `select_text`'s keyboard
+  walk) so they keep raising the app.
+
+### Notes
+
+- `activate:false` does not cover `scroll`, `menu`, or the synthesized-input
+  paths: those events go to whatever is frontmost, so they still activate.
+- The generated-script assertions are the evidence for non-activation; a live
+  unfocused-app AXPress trial has not been run, since background AX support is
+  application-specific.
+
 ## 4.3.0 — 2026-09-12
 
 ### Added

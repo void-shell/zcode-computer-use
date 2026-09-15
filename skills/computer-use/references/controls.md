@@ -13,6 +13,14 @@ exact arguments; use these patterns only on the requested app/window.
 - Prefer `click element_index`, `set_value`, `select_text`, or `perform_action`;
   discover actions with `element_info`. After acting, refresh state before reusing
   indices. Coordinate clicks use screenshot pixels; the server rescales/reanchors.
+- Element actions default to `activate:true`, which raises the app. Pass
+  `activate:false` to act on a background app without taking the user's focus:
+  no `set frontmost` is emitted, and coordinate clicks are refused rather than
+  run against whatever is in front. Non-activating success means the AX request
+  was submitted, not that the UI changed — refresh with
+  `get_app_state(activate:false)` and check the result. `select_text` with
+  `activate:false` attempts the AX range only and disables the keyboard fallback;
+  `perform_action` refuses `AXRaise` in that mode.
 - `filter` limits displayed tree lines without invalidating indices. `find(text?,
   role?)` queries the current capture without another screenshot. Bound large
   trees with `depth`; `depth=0` is screenshot-only.
@@ -29,7 +37,9 @@ exact arguments; use these patterns only on the requested app/window.
   `activate:false` observes without stealing focus; `launch:true` deliberately
   opens a non-running app.
 - `select_text` reports verified `selected_text` and method, rather than assuming
-  a click selected text. Keyboard fallback is capped at 400 characters.
+  a click selected text. Keyboard fallback is capped at 400 characters and is
+  skipped entirely when `activate:false` (its write is still attempted, and an
+  unverifiable range returns `unsupported`).
 - `type_text` paste uses and restores the clipboard; `method:"keys"` is useful
   when pastes are ignored or clipboard changes are inappropriate. Explicit
   `clipboard` reads/writes touch private user data; use only for the requested task.

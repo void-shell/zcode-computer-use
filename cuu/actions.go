@@ -345,12 +345,21 @@ func findWindowByID(winID int64) (*cgWindow, *ToolError) {
 
 // ---------------------------------------------------------------- element actions
 
-func axPress(st *serverState, index, times int) *ToolError {
+// elementActivationStmt lets AX callers skip activation. Synthesized input
+// must continue to use frontmostStmt unconditionally.
+func elementActivationStmt(st *serverState, activate bool) (string, *ToolError) {
+	if !activate {
+		return "", nil
+	}
+	return frontmostStmt(st)
+}
+
+func axPress(st *serverState, index, times int, activate bool) *ToolError {
 	addr, terr := elementSource(st, index)
 	if terr != nil {
 		return terr
 	}
-	front, terr := frontmostStmt(st)
+	front, terr := elementActivationStmt(st, activate)
 	if terr != nil {
 		return terr
 	}
@@ -372,7 +381,7 @@ func axPress(st *serverState, index, times int) *ToolError {
 	return nil
 }
 
-func axSetValue(st *serverState, index int, value string) *ToolError {
+func axSetValue(st *serverState, index int, value string, activate bool) *ToolError {
 	addr, terr := elementSource(st, index)
 	if terr != nil {
 		return terr
@@ -381,7 +390,7 @@ func axSetValue(st *serverState, index int, value string) *ToolError {
 	if terr != nil {
 		return terr
 	}
-	front, terr := frontmostStmt(st)
+	front, terr := elementActivationStmt(st, activate)
 	if terr != nil {
 		return terr
 	}
@@ -394,7 +403,7 @@ func axSetValue(st *serverState, index int, value string) *ToolError {
 
 var axActionRe = regexp.MustCompile(`^AX[A-Za-z]+$`)
 
-func axPerformAction(st *serverState, index int, action string) *ToolError {
+func axPerformAction(st *serverState, index int, action string, activate bool) *ToolError {
 	if !axActionRe.MatchString(action) {
 		return toolErr(
 			"invalid_args",
@@ -402,11 +411,19 @@ func axPerformAction(st *serverState, index int, action string) *ToolError {
 			"must look like AXPick, AXConfirm, AXIncrement (letters only, "+
 				"AX prefix); discover names with element_info")
 	}
+	// AXRaise is an explicit request to bring the element's window forward, so
+	// it contradicts a non-activating call rather than being silently skipped.
+	if action == "AXRaise" && !activate {
+		return toolErr(
+			"invalid_args",
+			"AXRaise contradicts activate:false because it raises the window",
+			"drop the action, or pass activate:true to raise deliberately")
+	}
 	addr, terr := elementSource(st, index)
 	if terr != nil {
 		return terr
 	}
-	front, terr := frontmostStmt(st)
+	front, terr := elementActivationStmt(st, activate)
 	if terr != nil {
 		return terr
 	}
@@ -495,8 +512,14 @@ func axSelectViaKeys(st *serverState, addr string, start, length int) *ToolError
 // AXSelectedText readback must equal that slice of the element's value.
 // Apps that ignore the attribute write (TextEdit does) get the keyboard
 // fallback. Indices are code points, like Python string slicing.
-func axSelectText(st *serverState, index, start, length int) (map[string]any, *ToolError) {
+func axSelectText(st *serverState, index, start, length int, activate bool) (map[string]any, *ToolError) {
 	addr, terr := elementSource(st, index)
+	if terr != nil {
+		return nil, terr
+	}
+	// Resolved once: false leaves the script with no focus statement, and also
+	// disables the keyboard fallback below.
+	front, terr := elementActivationStmt(st, activate)
 	if terr != nil {
 		return nil, terr
 	}
@@ -527,7 +550,7 @@ func axSelectText(st *serverState, index, start, length int) (map[string]any, *T
 	method := ""
 	// AXSelectedTextRange write attempt
 	writeSrc := "tell application \"System Events\"\n" +
-		mustFrontmost(st) +
+		front +
 		fmt.Sprintf("    set el to %s\n", addr) +
 		fmt.Sprintf("    set value of attribute \"AXSelectedTextRange\" of el to {%d, %d}\n", start, length) +
 		"end tell"
@@ -541,7 +564,7 @@ func axSelectText(st *serverState, index, start, length int) (map[string]any, *T
 		// attribute write unsupported / unverified; keyboard fallback follows
 	}
 
-	if method == "" && start+length <= selectKeysMax {
+	if method == "" && activate && start+length <= selectKeysMax {
 		if terr := axSelectViaKeys(st, addr, start, length); terr != nil {
 			return nil, terr
 		}
@@ -558,6 +581,13 @@ func axSelectText(st *serverState, index, start, length int) (map[string]any, *T
 	}
 
 	if method == "" {
+		if !activate {
+			return nil, toolErr(
+				"unsupported",
+				fmt.Sprintf("could not verify selection [%d:%d) on element %d without activating", start, start+length, index),
+				"the keyboard fallback is disabled while activate is false; "+
+					"retry with activate:true if taking focus is acceptable")
+		}
 		return nil, toolErr(
 			"unsupported",
 			fmt.Sprintf("could not verify selection [%d:%d) on element %d", start, start+length, index),
@@ -565,14 +595,6 @@ func axSelectText(st *serverState, index, start, length int) (map[string]any, *T
 				"caret and use press_key with shift+arrows instead")
 	}
 	return map[string]any{"selected_text": sel, "method": method}, nil
-}
-
-func mustFrontmost(st *serverState) string {
-	front, terr := frontmostStmt(st)
-	if terr != nil {
-		return ""
-	}
-	return front
 }
 
 // axElementInfo inspects one element via a single osascript round-trip.

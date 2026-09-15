@@ -421,9 +421,18 @@ func i64_or_zero(p *int64) int64 {
 }
 
 func toolClick(st *serverState, a args) (any, *ToolError) {
+	activate, terr := argBool(a, elementActivateArg, true)
+	if terr != nil {
+		return nil, terr
+	}
 	elementRaw, hasElement := a.raw("element_index")
 	element := 0
 	hasEl := hasElement && elementRaw != nil
+	if !activate && !hasEl {
+		return nil, toolErr("invalid_args",
+			"activate:false requires an element_index; coordinate clicks cannot run in the background",
+			"use an element target, or explicitly allow foreground input with activate:true")
+	}
 	if hasEl {
 		var terr *ToolError
 		element, terr = argInt(a, "element_index", nil, false, nil, nil)
@@ -461,7 +470,7 @@ func toolClick(st *serverState, a args) (any, *ToolError) {
 	}
 	var how string
 	if hasEl {
-		if terr := axPress(st, element, count); terr != nil {
+		if terr := axPress(st, element, count, activate); terr != nil {
 			return nil, terr
 		}
 		how = fmt.Sprintf("AXPress element %d", element)
@@ -509,6 +518,12 @@ func toolClick(st *serverState, a args) (any, *ToolError) {
 			bt, rawNumberText(a, "x"), rawNumberText(a, "y"), ipx, ipy)
 	}
 	markStale(st)
+	if hasEl && !activate {
+		return messagePayload{
+			Result: how + ". AX request sent without activating; re-observe with " +
+				"get_app_state --activate=false to confirm the result.",
+		}, nil
+	}
 	return messagePayload{
 		Result: how + ". Action completed. Call get_app_state to see " +
 			"the updated UI.",
@@ -714,6 +729,10 @@ func toolDrag(st *serverState, a args) (any, *ToolError) {
 }
 
 func toolSetValue(st *serverState, a args) (any, *ToolError) {
+	activate, terr := argBool(a, elementActivateArg, true)
+	if terr != nil {
+		return nil, terr
+	}
 	element, terr := argInt(a, "element_index", nil, false, nil, nil)
 	if terr != nil {
 		return nil, terr
@@ -728,15 +747,18 @@ func toolSetValue(st *serverState, a args) (any, *ToolError) {
 	if terr := requireState(st, true); terr != nil {
 		return nil, terr
 	}
-	if terr := axSetValue(st, element, value); terr != nil {
+	if terr := axSetValue(st, element, value, activate); terr != nil {
 		return nil, terr
 	}
 	markStale(st)
-	return messagePayload{Result: fmt.Sprintf("Value set on element %d. Action "+
-		"completed. Call get_app_state to see the updated UI.", element)}, nil
+	return messagePayload{Result: elementActionResult("Value set on element %d", element, activate)}, nil
 }
 
 func toolSelectText(st *serverState, a args) (any, *ToolError) {
+	activate, terr := argBool(a, elementActivateArg, true)
+	if terr != nil {
+		return nil, terr
+	}
 	element, terr := argInt(a, "element_index", nil, false, nil, nil)
 	if terr != nil {
 		return nil, terr
@@ -757,7 +779,7 @@ func toolSelectText(st *serverState, a args) (any, *ToolError) {
 	if terr := requireState(st, true); terr != nil {
 		return nil, terr
 	}
-	result, terr := axSelectText(st, element, start, length)
+	result, terr := axSelectText(st, element, start, length, activate)
 	if terr != nil {
 		return nil, terr
 	}
@@ -783,6 +805,10 @@ func toolElementInfo(st *serverState, a args) (any, *ToolError) {
 }
 
 func toolPerformAction(st *serverState, a args) (any, *ToolError) {
+	activate, terr := argBool(a, elementActivateArg, true)
+	if terr != nil {
+		return nil, terr
+	}
 	element, terr := argInt(a, "element_index", nil, false, nil, nil)
 	if terr != nil {
 		return nil, terr
@@ -794,11 +820,24 @@ func toolPerformAction(st *serverState, a args) (any, *ToolError) {
 	if terr := requireState(st, true); terr != nil {
 		return nil, terr
 	}
-	if terr := axPerformAction(st, element, action); terr != nil {
+	if terr := axPerformAction(st, element, action, activate); terr != nil {
 		return nil, terr
 	}
 	markStale(st)
-	return messagePayload{Result: fmt.Sprintf("Performed %s on element "+
-		"%d. Action completed. Call "+
-		"get_app_state to see the updated UI.", action, element)}, nil
+	return messagePayload{Result: fmt.Sprintf("%s on element %d. %s",
+		action, element, elementActionOutcome(activate))}, nil
+}
+
+// elementActionOutcome avoids claiming a verified UI effect for a
+// non-activating call: the AX request was submitted, nothing more is known.
+func elementActionOutcome(activate bool) string {
+	if activate {
+		return "Action completed. Call get_app_state to see the updated UI."
+	}
+	return "AX request sent without activating; re-observe with " +
+		"get_app_state --activate=false to confirm the result."
+}
+
+func elementActionResult(format string, element int, activate bool) string {
+	return fmt.Sprintf(format, element) + ". " + elementActionOutcome(activate)
 }

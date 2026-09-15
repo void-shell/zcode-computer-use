@@ -130,6 +130,18 @@ cuu/bin/cuu selftest
    the next element action. The diff markers tell you exactly what your
    action changed.
 
+Element actions take an `activate` option (default `true`). Pass
+`activate:false` on `click` (with `element_index`), `set_value`,
+`perform_action` and `select_text` to act on a background app: cuu then sends
+the AX request without a `set frontmost` statement, so the user keeps their
+focus and their cursor. Coordinate clicks and `scroll` cannot run that way —
+coordinate clicks are refused with `invalid_args`, and the synthesized-input
+paths (`type_text`, `press_key`, and `select_text`'s keyboard fallback) always
+raise the app because the events go to whatever is frontmost. A non-activating
+action reports that the AX request was sent, not that the UI changed: re-observe
+with `get_app_state --activate=false` and check the outcome. Some apps ignore
+AX events while unfocused, and an app may still activate itself in response.
+
 Four tools cut turns and tokens around that loop:
 
 - `menu(app)` lists the menu bar (where most macOS functionality lives,
@@ -215,7 +227,9 @@ cuu press_key --key cmd+s
 - Screenshots are published atomically with `0600` files in a `0700`
   directory; the clipboard is saved/restored around pastes with non-text
   detection.
-- No silent launches, no silent focus steals, every error carries a remedy.
+- No silent launches, no silent coordinate fallbacks, every error carries a
+  remedy. Element actions activate the app unless the caller passes
+  `activate:false`.
 
 ## Verification
 

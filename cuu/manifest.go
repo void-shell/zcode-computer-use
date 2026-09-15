@@ -1,9 +1,12 @@
 package main
 
-// toolsManifest is the MCP tools/list payload — the tool surface is
-// unchanged from 3.0.1 so callers need no re-education. Kept as a raw JSON
-// constant so object key order is stable.
+// Element actions share one option name and schema property. CLI flags and
+// strict argument parsing use the same name.
+const elementActivateArg = "activate"
+const elementActivateProperty = `"` + elementActivateArg + `": {"type": "boolean", "default": true, "description": "Raise the app before the element action. false skips activation and disallows synthesized-input fallbacks; apps may still activate themselves in response."}`
 
+// toolsManifest is the MCP tools/list payload. Kept as a raw JSON constant
+// so object key order is stable.
 const toolsManifest = `[
  {
   "name": "list_apps",
@@ -38,7 +41,7 @@ const toolsManifest = `[
  },
  {
   "name": "click",
-  "description": "Click an element by index (preferred; left-press via AXPress) or by screenshot pixel coordinates (any button, click_count 1-2; double-click is left-only).",
+  "description": "Click an element by index (preferred; left-press via AXPress) or by screenshot pixel coordinates (any button, click_count 1-2; double-click is left-only). activate:false skips app activation for element targets; coordinate clicks reject it.",
   "inputSchema": {
    "type": "object",
    "properties": {
@@ -46,7 +49,8 @@ const toolsManifest = `[
     "x": {"type": "number"},
     "y": {"type": "number"},
     "mouse_button": {"type": "string", "enum": ["left", "right", "middle"], "default": "left", "description": "coordinate clicks only"},
-    "click_count": {"type": "integer", "minimum": 1, "maximum": 5, "default": 1}
+    "click_count": {"type": "integer", "minimum": 1, "maximum": 5, "default": 1},
+    ` + elementActivateProperty + `
    }
   }
  },
@@ -100,25 +104,27 @@ const toolsManifest = `[
  },
  {
   "name": "set_value",
-  "description": "Set the value of a settable accessibility element by index (no keystrokes, no clipboard).",
+  "description": "Set the value of a settable accessibility element by index (no keystrokes, no clipboard). activate:false skips app activation.",
   "inputSchema": {
    "type": "object",
    "properties": {
     "element_index": {"type": "integer"},
-    "value": {"type": "string"}
+    "value": {"type": "string"},
+    ` + elementActivateProperty + `
    },
    "required": ["element_index", "value"]
   }
  },
  {
   "name": "select_text",
-  "description": "Select a character range [start, start+length) in a text element by index. The selection is verified by content and the chosen method is reported; apps that ignore the AX range write get a keyboard-walk fallback (capped at 400 characters).",
+  "description": "Select a character range [start, start+length) in a text element by index. The selection is verified by content and the chosen method is reported; apps that ignore the AX range write get a keyboard-walk fallback (capped at 400 characters). activate:false attempts the AX range only and disables the keyboard fallback.",
   "inputSchema": {
    "type": "object",
    "properties": {
     "element_index": {"type": "integer"},
     "start": {"type": "integer", "minimum": 0},
-    "length": {"type": "integer", "minimum": 1}
+    "length": {"type": "integer", "minimum": 1},
+    ` + elementActivateProperty + `
    },
    "required": ["element_index", "start", "length"]
   }
@@ -134,12 +140,13 @@ const toolsManifest = `[
  },
  {
   "name": "perform_action",
-  "description": "Invoke a named accessibility action on an element (AXPick, AXConfirm, AXCancel, AXIncrement, ...). Discover names with element_info. (The v2 name perform_secondary_action still works as an alias.)",
+  "description": "Invoke a named accessibility action on an element (AXPick, AXConfirm, AXCancel, AXIncrement, ...). Discover names with element_info. activate:false skips app activation and refuses AXRaise. (The v2 name perform_secondary_action still works as an alias.)",
   "inputSchema": {
    "type": "object",
    "properties": {
     "element_index": {"type": "integer"},
-    "action": {"type": "string", "description": "AX action name, e.g. AXPick"}
+    "action": {"type": "string", "description": "AX action name, e.g. AXPick"},
+    ` + elementActivateProperty + `
    },
    "required": ["element_index", "action"]
   }
