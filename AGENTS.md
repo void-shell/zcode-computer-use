@@ -3,6 +3,8 @@
 macOS control via the Go `cuu` CLI and MCP server (`cuu serve`). CLI/MCP share
 state in `~/.cache/zcode-computer-use`; structured logs are in `server.log` there.
 The v3 Python implementation under `mcp/_legacy/` and `tests/_legacy/` is provenance.
+macOS only for now: on Linux it builds and its tests pass, but live GUI cases skip,
+so a green run there proves the protocol and not desktop control.
 
 ## Environment gotchas
 
